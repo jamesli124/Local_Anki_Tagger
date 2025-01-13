@@ -17,7 +17,7 @@ pip install -r requirements.txt
 
 ## 4. Embed the anki txt file 
 ```bash
-python Scripts/embed_anki_deck.py Data/anki.txt
+python embed_deck.py
 ```
 5. Make a folder titled "Lectures", and create subfolders titled after the tag-names you'll be using. Ensure theses no spaces for the subfolders names
   
