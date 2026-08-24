@@ -1,19 +1,14 @@
 import pandas as pd
 import numpy as np
 import re, sys, csv, os
-import openai
-import tiktoken
+from Scripts.util.llm_client import client
+from Scripts.util import config, token_utils
 from openai import APIError, RateLimitError, APIConnectionError
 import time, requests
 
 MAX_POOR_MATCH_RUN = 12
 MAX_TOKENS_PER_OBJ = 30000
 
-def set_api_key():
-    try:
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-    except KeyError:
-        print("Set your OpenAI API key as an environment variable named 'OPENAI_API_KEY' eg In terminal: export OPENAI_API_KEY=your-api-key")
 
 def handle_api_error(func):
     def wrapper(*args, **kwargs):
@@ -61,16 +56,12 @@ Format: Start your statement with 'Score: # (just the final score number. No nee
     return formatted_prompt
 
 def count_tokens(text):
-    enc = tiktoken.encoding_for_model("gpt-4o-mini")
-    tokens = list(enc.encode(text))
-    return len(tokens)
+    return token_utils.count_tokens(text)
 
 def tokens_in_prompt(formatted_prompt):
     formatted_prompt_str = ""
     for message in formatted_prompt:
         formatted_prompt_str += message["content"] + " "
-    #token_count = count_tokens(formatted_prompt_str)
-    #print(f"Tokens in prompt: {token_count}")
     return count_tokens(formatted_prompt_str)
 
 @handle_api_error
@@ -78,8 +69,8 @@ def rate_card_for_obj(prompt, temperature=1):
     # Calculate the remaining tokens for the response
     #remaining_tokens = 16000 - tokens_in_prompt(prompt) - 20
     remaining_tokens = 16000 - 20
-    completions = openai.chat.completions.create(
-        model="gpt-4o-mini",  # Use the gpt-4o-mini engine
+    completions = client.chat.completions.create(
+        model=config.CHAT_MODEL,  # Use the configured engine
         messages=prompt,
         max_tokens=remaining_tokens,  # Set the remaining tokens as the maximum for the response
         n=1,
@@ -178,7 +169,6 @@ def main(emb_path,obj_path):
                 progress_csv_writer.writerow([obj_index])
 
 if __name__ == "__main__":
-    set_api_key()
     if len(sys.argv) != 3:
         print("Usage: select_cards.py <deck_embeding> <learning_objectives>")
         sys.exit(1)

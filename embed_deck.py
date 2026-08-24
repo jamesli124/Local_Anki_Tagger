@@ -1,14 +1,11 @@
 import os
-import openai
 import pandas as pd
-import tiktoken
 from Scripts.util.embeddings_utils import get_embedding
+from Scripts.util import config, token_utils
 from tqdm import tqdm
 
-# OpenAI Configuration
-OPENAI_API_KEY_ENV_VAR = 'OPENAI_API_KEY'
-EMBEDDING_MODEL = "text-embedding-3-small"
-EMBEDDING_ENCODING = "cl100k_base"
+# LLM Configuration
+EMBEDDING_MODEL = config.EMBEDDING_MODEL
 MAX_TOKENS = 8000
 
 # Define the source folder and input file relative to the script directory
@@ -17,8 +14,6 @@ source_folder = os.path.join(script_dir, 'Data')  # Path to the Data folder
 input_datapath = os.path.join(source_folder, 'anki.txt')  # Full path to the anki.txt file
 
 
-def set_api_key(api_key):
-    openai.api_key = api_key
 
 
 def load_dataset(input_datapath):
@@ -28,7 +23,8 @@ def load_dataset(input_datapath):
     return df
 
 
-def filter_by_tokens(df, encoding):
+def filter_by_tokens(df):
+    encoding = token_utils.get_encoding()
     df["tokens"] = df.card.apply(lambda x: len(encoding.encode(x)))
     return df[df.tokens <= MAX_TOKENS]
 
@@ -43,19 +39,13 @@ def save_embeddings(df, output_prefix):
 
 
 def main():
-    api_key = os.environ.get(OPENAI_API_KEY_ENV_VAR)
-    assert api_key, f"Set your OpenAI API key as an environment variable named '{OPENAI_API_KEY_ENV_VAR}'"
-
-    # Set OpenAI API key
-    set_api_key(api_key)
-
     # Define output file prefix
     output_prefix = "anki"  # EDIT AS NEEDED
 
+
     # Load and preprocess dataset
     df = load_dataset(input_datapath)
-    encoding = tiktoken.get_encoding(EMBEDDING_ENCODING)
-    df = filter_by_tokens(df, encoding)
+    df = filter_by_tokens(df)
 
     # Calculate embeddings for cards
     df["emb"] = calculate_embeddings(df)

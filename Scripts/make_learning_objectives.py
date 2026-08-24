@@ -1,21 +1,16 @@
 import os, re, sys, csv, glob, time
-import openai
 import tiktoken
 import pdfplumber
 from openai import RateLimitError, APIError
-from util.embeddings_utils import get_embedding
+from Scripts.util.embeddings_utils import get_embedding
+from Scripts.util.llm_client import client
+from Scripts.util import config, token_utils
 from pathlib import Path
 
 MAX_TOKENS = 16000
 TOKEN_BUFFER = 2000
 
 
-def set_api_key():
-    try:
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-    except KeyError:
-        print(
-            "Set your OpenAI API key as an environment variable named 'OPENAI_API_KEY' eg In terminal: export OPENAI_API_KEY=your-api-key")
 
 
 def handle_api_error(func):
@@ -35,9 +30,7 @@ def handle_api_error(func):
 
 
 def count_tokens(text):
-    enc = tiktoken.encoding_for_model("gpt-4o-mini")
-    tokens = list(enc.encode(text))
-    return len(tokens)
+    return token_utils.count_tokens(text)
 
 
 def extract_text_from_pdf(pdf_file):
@@ -71,8 +64,8 @@ def generate_questions(prompt, temperature=1.0):
         print(f"Current length: {total_tokens}, recommended < {MAX_TOKENS - TOKEN_BUFFER}")
         raise ValueError('Input text too long')
 
-    completion = openai.chat.completions.create(
-        model="gpt-4o-mini",
+    completion = client.chat.completions.create(
+        model=config.CHAT_MODEL,
         messages=formatted_prompt,
         max_tokens=remaining_tokens,
         n=1,
@@ -109,7 +102,7 @@ def define_objectives_from_pdf(pdf_file, temperature=1.0):
         # Ensure the chunk does not exceed the maximum token limit minus the system message tokens
         if count_tokens(page_text) > max_chunk_size:
             # Truncate the chunk to fit within the token limit
-            enc = tiktoken.encoding_for_model("gpt-4o-mini")
+            enc = token_utils.get_encoding()
             tokens = list(enc.encode(page_text))
             truncated_text = enc.decode(tokens[:max_chunk_size])
         else:
@@ -131,9 +124,10 @@ def define_objectives_from_pdf(pdf_file, temperature=1.0):
 
 
 @handle_api_error
-def generate_embedding(obj, embedding_model="text-embedding-3-small", embedding_encoding="cl100k_base"):
+def generate_embedding(obj, embedding_model=config.EMBEDDING_MODEL, embedding_encoding="cl100k_base"):
     # Set up the tokenizer
-    encoding = tiktoken.get_encoding(embedding_encoding)
+    encoding = token_utils.get_encoding(embedding_encoding)
+
 
     # Generate the tokens and embeddings
     tokens = len(encoding.encode(obj))
@@ -179,7 +173,6 @@ def main(input_path):
 
 
 if __name__ == "__main__":
-    set_api_key()
     if len(sys.argv) != 2:
         print("Usage: make_learning_objectives.py <pdf_file_or_dir>")
         sys.exit(1)
