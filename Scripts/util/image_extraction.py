@@ -2,6 +2,7 @@ import hashlib
 
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 
+from Scripts.util import config
 from Scripts.util.vision_utils import describe_image
 
 # Filters out logos/icons/bullets. PPTX shape size is in EMU (1 inch).
@@ -28,6 +29,8 @@ def describe_pdf_page_if_image_only(page, seen_xrefs=None):
     """Given a fitz Page with no extractable text, return a vision description
     of the rendered page if it contains a sufficiently large embedded image,
     else None (a truly blank/divider page, or one with only a small logo)."""
+    if not config.ENABLE_VISION:
+        return None
     qualifying = _qualifying_pdf_image_xrefs(page)
     if not qualifying:
         return None
@@ -48,6 +51,8 @@ def describe_pdf_page_images(page, seen_xrefs=None):
     body text/bullets aren't ignored. seen_xrefs, if given, is a set shared
     across the whole document so a repeated logo/banner image is only
     described once."""
+    if not config.ENABLE_VISION:
+        return []
     descriptions = []
     for xref in _qualifying_pdf_image_xrefs(page):
         if seen_xrefs is not None:
@@ -68,6 +73,8 @@ def describe_pptx_slide_images(slide, seen_image_hashes=None):
     on a slide (blank or text-bearing). seen_image_hashes, if given, is a set
     shared across the whole presentation so a repeated logo/banner image is
     only described once."""
+    if not config.ENABLE_VISION:
+        return []
     descriptions = []
     for shape in slide.shapes:
         if shape.shape_type != MSO_SHAPE_TYPE.PICTURE:

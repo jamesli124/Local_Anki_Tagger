@@ -3,6 +3,10 @@ import os
 # Provider can be 'ollama' or 'openai'
 PROVIDER = os.getenv('LLM_PROVIDER', 'ollama').lower()
 
+# Set to disable vision-model calls for image-only pages/slides and embedded
+# figures (e.g. if CHAT_MODEL doesn't support vision, or to skip the cost).
+ENABLE_VISION = os.getenv('ENABLE_VISION', 'true').lower() not in ('0', 'false', 'no')
+
 if PROVIDER == 'ollama':
     BASE_URL = "http://localhost:11434/v1"
     API_KEY = "ollama"  # Dummy key for Ollama
