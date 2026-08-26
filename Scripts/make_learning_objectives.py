@@ -1,6 +1,7 @@
 import os, re, sys, csv, glob, time
 import tiktoken
 import pdfplumber
+import pptx
 from openai import RateLimitError, APIError
 from Scripts.util.embeddings_utils import get_embedding
 from Scripts.util.llm_client import client
@@ -36,6 +37,18 @@ def count_tokens(text):
 def extract_text_from_pdf(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
         text_pages = [page.extract_text() or "" for page in pdf.pages]
+    return text_pages
+
+
+def extract_text_from_pptx(pptx_file):
+    prs = pptx.Presentation(pptx_file)
+    text_pages = []
+    for slide in prs.slides:
+        slide_text = []
+        for shape in slide.shapes:
+            if hasattr(shape, "text"):
+                slide_text.append(shape.text)
+        text_pages.append("\n".join(slide_text))
     return text_pages
 
 
@@ -76,8 +89,16 @@ def generate_questions(prompt, temperature=1.0):
 
 
 @handle_api_error
-def define_objectives_from_pdf(pdf_file, temperature=1.0):
-    text_pages = extract_text_from_pdf(pdf_file)
+def define_objectives_from_file(file_path, temperature=1.0):
+    file_ext = Path(file_path).suffix.lower()
+    if file_ext == '.pdf':
+        text_pages = extract_text_from_pdf(file_path)
+    elif file_ext == '.pptx':
+        text_pages = extract_text_from_pptx(file_path)
+    else:
+        print(f"Unsupported file extension: {file_ext}")
+        return []
+
     all_objectives = []
 
     system_message = ("You are receiving lecture material for a medical school lesson. Use the following principles when making learning objectives (LO).\n\n"
@@ -115,7 +136,7 @@ def define_objectives_from_pdf(pdf_file, temperature=1.0):
         objectives = []
         for line in generated_text.split("\n"):
             line_strip = line.strip()
-            if line_strip.startswith("1. ") or line_strip.startswith("2. ") or line_strip.startswith("3. "):
+            if line_strip.startswith(("1. ", "2. ", "3. ")):
                 objectives.append(line_strip)
 
         all_objectives.extend(objectives)
@@ -154,9 +175,10 @@ def main(input_path):
     output_file = output_prefix + "_learning_objectives.csv"
 
     if path.is_file():
-        pdf_files = [input_path]
+        input_files = [input_path]
     elif path.is_dir():
-        pdf_files = list(path.glob('*.pdf'))
+        # Include both PDF and PPTX files
+        input_files = list(path.glob('*.pdf')) + list(path.glob('*.pptx'))
     else:
         print("The provided path is not a valid file or directory.")
         sys.exit(1)
@@ -165,16 +187,16 @@ def main(input_path):
         csv_writer = csv.writer(csvfile)
         csv_writer.writerow(['name', 'learning_objective', 'tokens', 'emb'])
 
-        for pdf_file in pdf_files:
-            print(f"Processing PDF: {pdf_file}")  # Debugging print statement
-            objectives = define_objectives_from_pdf(pdf_file)
-            tag = Path(pdf_file).stem
+        for file_path in input_files:
+            print(f"Processing file: {file_path}")  # Debugging print statement
+            objectives = define_objectives_from_file(file_path)
+            tag = Path(file_path).stem
             write_to_csv(csv_writer, tag, objectives)
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: make_learning_objectives.py <pdf_file_or_dir>")
+        print("Usage: make_learning_objectives.py <pdf_or_pptx_file_or_dir>")
         sys.exit(1)
     path = sys.argv[1]
     main(path)

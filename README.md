@@ -1,6 +1,6 @@
 # Anki_Tagger
 
-Anki_Tagger is a project that parses lecture guides (PDFs) and identifies the most relevant Anki cards within a premade Anki deck. It helps medical students align vast Anki decks with their specific preclinical curriculum.
+Anki_Tagger is a project that parses lecture guides (PDF, PPTX, and DOCX) and identifies the most relevant Anki cards within a premade Anki deck. It helps medical students align vast Anki decks with their specific preclinical curriculum.
 
 ## Installation
 
@@ -24,7 +24,7 @@ pip install -r requirements.txt
 3. **Prepare Lectures**:
    - Create a folder titled `Lectures`.
    - Create subfolders inside `Lectures` titled after the tags you want to use (e.g., `01.Vitamins_1`, `02.Vitamins_2`). Ensure subfolder names contain no spaces.
-   - Place the corresponding lecture PDF materials inside these subfolders.
+   - Place the corresponding lecture materials (`.pdf`, `.pptx`, or `.docx`) inside these subfolders.
 
 ## LLM Configuration
 
@@ -53,9 +53,9 @@ python main.py
 ### Alternative: Manual Step-by-Step Execution
 If you prefer to run each stage individually:
 
-1. **Generate Learning Objectives**: Analyze PDFs and create summary questions.
+1. **Generate Learning Objectives**: Analyze lecture files and create summary questions.
    ```bash
-   python Scripts/make_learning_objectives.py <pdf_file_or_dir>
+   python Scripts/make_learning_objectives.py <pdf_or_pptx_file_or_dir>
    ```
 2. **Select Cards**: Score cards based on their relevance to the objectives.
    ```bash

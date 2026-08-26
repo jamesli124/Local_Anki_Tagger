@@ -2,3 +2,10 @@ CLAUDE.md
 Data/*
 Lectures/*
 venv/*
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]

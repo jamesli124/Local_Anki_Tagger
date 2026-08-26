@@ -33,21 +33,22 @@ else:
     print(f"Error running combine_documents.py: {process.stderr}")
     sys.exit(1)
 
-def find_pdfs_in_script_folder():
-    pdf_files = glob.glob(os.path.join(script_dir, '*.pdf'))
-    if len(pdf_files) == 0:
-        raise FileNotFoundError(f"No PDF files found in {script_dir}.")
-    return pdf_files
+def find_lecture_files():
+    files = glob.glob(os.path.join(script_dir, '*.pdf')) + glob.glob(os.path.join(script_dir, '*.pptx'))
+    if len(files) == 0:
+        raise FileNotFoundError(f"No PDF or PPTX files found in {script_dir}.")
+    return files
 
-pdf_files = find_pdfs_in_script_folder()
+lecture_files = find_lecture_files()
 
-for pdf_file in pdf_files:
-    pdf_name = os.path.splitext(os.path.basename(pdf_file))[0]
+for lecture_file in lecture_files:
+    lecture_name = os.path.splitext(os.path.basename(lecture_file))[0]
 
     script_file_pairs = [
-        ("Scripts/make_learning_objectives.py", pdf_file),
-        ("Scripts/select_cards.py", "Data/anki_embeddings.csv", f"{pdf_name}_learning_objectives.csv"),
+        ("Scripts/make_learning_objectives.py", lecture_file),
+        ("Scripts/select_cards.py", "Data/anki_embeddings.csv", f"{lecture_name}_learning_objectives.csv"),
     ]
+
 
     for pair in script_file_pairs:
         script = pair[0]
@@ -78,21 +79,21 @@ for pdf_file in pdf_files:
         process.wait()
         #print(f"{script} finished with exit code {process.returncode}\n", flush=True)
 
-    cards_csv = f"{pdf_name}_cards.csv"
+    cards_csv = f"{lecture_name}_cards.csv"
     if os.path.exists(cards_csv):
         shutil.copy(cards_csv, os.path.join(cards_copy_folder, cards_csv))
         print(f"Copied {cards_csv} to {cards_copy_folder} for merging.")
 
     # Move files only after all scripts are successfully run
-    def move_files_to_new_folder(files_to_move, subfolder_path, pdf_name):
+    def move_files_to_new_folder(files_to_move, subfolder_path, lecture_name):
         """
         Moves specified files and folders to a new subfolder in the archive.
 
         :param files_to_move: List of files or folders to move.
         :param subfolder_path: Path to the archive subfolder.
-        :param pdf_name: The base name of the PDF being processed.
+        :param lecture_name: The base name of the file being processed.
         """
-        new_folder_name = f"{pdf_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        new_folder_name = f"{lecture_name}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         new_folder_path = os.path.join(subfolder_path, new_folder_name)
 
         # Ensure the new folder exists
@@ -116,17 +117,17 @@ for pdf_file in pdf_files:
 
 
     files_to_move = [
-        f"{pdf_name}_cards.csv",
-        f"{pdf_name}_learning_objectives.csv",
-        f"{pdf_name}_progress.csv",
-        f"Lectures/{pdf_name}",  # Folder to move
-        pdf_file
+        f"{lecture_name}_cards.csv",
+        f"{lecture_name}_learning_objectives.csv",
+        f"{lecture_name}_progress.csv",
+        f"Lectures/{lecture_name}",  # Folder to move
+        lecture_file
     ]
     subfolder_path = 'Archive'
 
-    move_files_to_new_folder(files_to_move, subfolder_path, pdf_name)
+    move_files_to_new_folder(files_to_move, subfolder_path, lecture_name)
 
-print(f"All PDFs have been processed.")
+print(f"All lecture files have been processed.")
 
 # List to hold DataFrames for each CSV file
 dfs = []
