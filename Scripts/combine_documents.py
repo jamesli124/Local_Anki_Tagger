@@ -9,6 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 from Scripts.util.image_extraction import (
     describe_pdf_page_if_image_only,
+    describe_pdf_page_images,
     describe_pptx_slide_images,
     get_pptx_slide_notes,
 )
@@ -16,13 +17,18 @@ from Scripts.util.image_extraction import (
 
 def extract_text_from_pdf(pdf_file):
     text = ""
+    seen_xrefs = set()
     with fitz.open(pdf_file) as pdf:
         for page in pdf:
             page_text = page.get_text()
             if not page_text.strip():
-                description = describe_pdf_page_if_image_only(page)
+                description = describe_pdf_page_if_image_only(page, seen_xrefs)
                 if description:
                     page_text = description
+            else:
+                figures = describe_pdf_page_images(page, seen_xrefs)
+                if figures:
+                    page_text += "\n" + "\n".join(f"[Figure: {f}]" for f in figures)
             text += page_text + "\n"
     return text.strip()
 
@@ -38,16 +44,19 @@ def extract_text_from_docx(docx_file):
 def extract_text_from_pptx(pptx_file):
     prs = Presentation(pptx_file)
     text = ""
+    seen_image_hashes = set()
     for slide in prs.slides:
         slide_text = []
         for shape in slide.shapes:
             if hasattr(shape, "text") and shape.text.strip():
                 slide_text.append(shape.text)
 
-        if not slide_text:
-            image_description = describe_pptx_slide_images(slide)
-            if image_description:
-                slide_text.append(image_description)
+        image_descriptions = describe_pptx_slide_images(slide, seen_image_hashes)
+        if image_descriptions:
+            if slide_text:
+                slide_text.extend(f"[Figure: {d}]" for d in image_descriptions)
+            else:
+                slide_text.extend(image_descriptions)
 
         notes = get_pptx_slide_notes(slide)
         if notes:

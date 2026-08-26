@@ -7,6 +7,7 @@ from openai import RateLimitError, APIError
 from Scripts.util.embeddings_utils import get_embedding
 from Scripts.util.image_extraction import (
     describe_pdf_page_if_image_only,
+    describe_pdf_page_images,
     describe_pptx_slide_images,
     get_pptx_slide_notes,
 )
@@ -46,15 +47,24 @@ def extract_text_from_pdf(pdf_file):
 
     # Pages with no extractable text are often a full-page figure (radiology,
     # gross pathology, a diagram) rather than genuinely blank; describe those
-    # via a vision model instead of silently dropping them.
-    blank_indices = [i for i, t in enumerate(text_pages) if not t.strip()]
-    if blank_indices:
-        doc = fitz.open(pdf_file)
-        for i in blank_indices:
-            description = describe_pdf_page_if_image_only(doc[i])
+    # via a vision model instead of silently dropping them. Pages that do have
+    # text may still carry their own embedded figures (a diagram next to
+    # bullet points), so those are described too and appended as call-outs.
+    # seen_xrefs dedupes a logo/banner image repeated across pages so it's
+    # only ever described once.
+    doc = fitz.open(pdf_file)
+    seen_xrefs = set()
+    for i, page_text in enumerate(text_pages):
+        fitz_page = doc[i]
+        if not page_text.strip():
+            description = describe_pdf_page_if_image_only(fitz_page, seen_xrefs)
             if description:
                 text_pages[i] = description
-        doc.close()
+        else:
+            figures = describe_pdf_page_images(fitz_page, seen_xrefs)
+            if figures:
+                text_pages[i] = page_text + "\n" + "\n".join(f"[Figure: {f}]" for f in figures)
+    doc.close()
 
     return text_pages
 
@@ -62,16 +72,19 @@ def extract_text_from_pdf(pdf_file):
 def extract_text_from_pptx(pptx_file):
     prs = pptx.Presentation(pptx_file)
     text_pages = []
+    seen_image_hashes = set()
     for slide in prs.slides:
         slide_text = []
         for shape in slide.shapes:
             if hasattr(shape, "text") and shape.text.strip():
                 slide_text.append(shape.text)
 
-        if not slide_text:
-            image_description = describe_pptx_slide_images(slide)
-            if image_description:
-                slide_text.append(image_description)
+        image_descriptions = describe_pptx_slide_images(slide, seen_image_hashes)
+        if image_descriptions:
+            if slide_text:
+                slide_text.extend(f"[Figure: {d}]" for d in image_descriptions)
+            else:
+                slide_text.extend(image_descriptions)
 
         notes = get_pptx_slide_notes(slide)
         if notes:
