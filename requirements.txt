@@ -12,3 +12,4 @@ reportlab
 python-docx
 python-pptx
 PyMuPDF
+tqdm
