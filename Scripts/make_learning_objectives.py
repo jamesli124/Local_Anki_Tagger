@@ -1,9 +1,15 @@
 import os, re, sys, csv, glob, time
 import tiktoken
+import fitz
 import pdfplumber
 import pptx
 from openai import RateLimitError, APIError
 from Scripts.util.embeddings_utils import get_embedding
+from Scripts.util.image_extraction import (
+    describe_pdf_page_if_image_only,
+    describe_pptx_slide_images,
+    get_pptx_slide_notes,
+)
 from Scripts.util.llm_client import client
 from Scripts.util import config, token_utils
 from pathlib import Path
@@ -37,6 +43,19 @@ def count_tokens(text):
 def extract_text_from_pdf(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
         text_pages = [page.extract_text() or "" for page in pdf.pages]
+
+    # Pages with no extractable text are often a full-page figure (radiology,
+    # gross pathology, a diagram) rather than genuinely blank; describe those
+    # via a vision model instead of silently dropping them.
+    blank_indices = [i for i, t in enumerate(text_pages) if not t.strip()]
+    if blank_indices:
+        doc = fitz.open(pdf_file)
+        for i in blank_indices:
+            description = describe_pdf_page_if_image_only(doc[i])
+            if description:
+                text_pages[i] = description
+        doc.close()
+
     return text_pages
 
 
@@ -46,8 +65,18 @@ def extract_text_from_pptx(pptx_file):
     for slide in prs.slides:
         slide_text = []
         for shape in slide.shapes:
-            if hasattr(shape, "text"):
+            if hasattr(shape, "text") and shape.text.strip():
                 slide_text.append(shape.text)
+
+        if not slide_text:
+            image_description = describe_pptx_slide_images(slide)
+            if image_description:
+                slide_text.append(image_description)
+
+        notes = get_pptx_slide_notes(slide)
+        if notes:
+            slide_text.append(notes)
+
         text_pages.append("\n".join(slide_text))
     return text_pages
 

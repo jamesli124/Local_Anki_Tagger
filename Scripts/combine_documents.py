@@ -7,12 +7,23 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+from Scripts.util.image_extraction import (
+    describe_pdf_page_if_image_only,
+    describe_pptx_slide_images,
+    get_pptx_slide_notes,
+)
+
 
 def extract_text_from_pdf(pdf_file):
     text = ""
     with fitz.open(pdf_file) as pdf:
         for page in pdf:
-            text += page.get_text() + "\n"
+            page_text = page.get_text()
+            if not page_text.strip():
+                description = describe_pdf_page_if_image_only(page)
+                if description:
+                    page_text = description
+            text += page_text + "\n"
     return text.strip()
 
 
@@ -28,9 +39,21 @@ def extract_text_from_pptx(pptx_file):
     prs = Presentation(pptx_file)
     text = ""
     for slide in prs.slides:
+        slide_text = []
         for shape in slide.shapes:
-            if hasattr(shape, "text"):
-                text += shape.text + "\n"
+            if hasattr(shape, "text") and shape.text.strip():
+                slide_text.append(shape.text)
+
+        if not slide_text:
+            image_description = describe_pptx_slide_images(slide)
+            if image_description:
+                slide_text.append(image_description)
+
+        notes = get_pptx_slide_notes(slide)
+        if notes:
+            slide_text.append(notes)
+
+        text += "\n".join(slide_text) + "\n"
     return text.strip()
 
 
