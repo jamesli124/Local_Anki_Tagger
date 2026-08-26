@@ -94,6 +94,9 @@ def main():
             output_pdf_path = os.path.join(project_root, f"{lecture_subfolder}.pdf")
             combine_texts_to_pdf(full_lecture_path, output_pdf_path)
             print(f"Combined text saved to {output_pdf_path}")
+        elif not lecture_subfolder.startswith('.'):
+            print(f"Warning: ignoring '{lecture_subfolder}' -- lecture materials must "
+                  f"be placed in a subfolder of 'Lectures' named after the desired tag.")
 
 
 if __name__ == "__main__":

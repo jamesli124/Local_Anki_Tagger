@@ -34,9 +34,11 @@ else:
     sys.exit(1)
 
 def find_lecture_files():
-    files = glob.glob(os.path.join(script_dir, '*.pdf')) + glob.glob(os.path.join(script_dir, '*.pptx'))
+    # combine_documents.py flattens each Lectures/ subfolder into a single
+    # root-level .pdf, so that is the only extension that appears here.
+    files = glob.glob(os.path.join(script_dir, '*.pdf'))
     if len(files) == 0:
-        raise FileNotFoundError(f"No PDF or PPTX files found in {script_dir}.")
+        raise FileNotFoundError(f"No PDF files found in {script_dir}.")
     return files
 
 lecture_files = find_lecture_files()

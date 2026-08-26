@@ -118,6 +118,12 @@ def define_objectives_from_file(file_path, temperature=1.0):
     max_chunk_size = MAX_TOKENS - system_token_count - TOKEN_BUFFER
 
     for page_number, page_text in enumerate(text_pages, start=1):
+        # Slide decks are full of image-only, title, and divider pages; sending
+        # those as empty source material just invents objectives from nothing.
+        if not page_text.strip():
+            print(f"Skipping page {page_number}/{len(text_pages)} (no text)")
+            continue
+
         print(f"Processing page {page_number}/{len(text_pages)}")  # Debugging print statement
 
         # Ensure the chunk does not exceed the maximum token limit minus the system message tokens
