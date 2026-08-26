@@ -4,6 +4,12 @@ import fitz
 import pdfplumber
 import pptx
 from openai import RateLimitError, APIError
+
+# Run as `python3 Scripts/make_learning_objectives.py`, which puts Scripts/
+# (not the repo root) on sys.path, so the Scripts.* imports below can't
+# resolve without this.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from Scripts.util.embeddings_utils import get_embedding
 from Scripts.util.image_extraction import (
     describe_pdf_page_if_image_only,

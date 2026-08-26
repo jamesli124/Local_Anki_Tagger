@@ -1,6 +1,12 @@
 import pandas as pd
 import numpy as np
 import re, sys, csv, os
+
+# Run as `python3 Scripts/select_cards.py`, which puts Scripts/ (not the
+# repo root) on sys.path, so the Scripts.* imports below can't resolve
+# without this.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from Scripts.util.llm_client import client
 from Scripts.util import config, token_utils
 from openai import APIError, RateLimitError, APIConnectionError

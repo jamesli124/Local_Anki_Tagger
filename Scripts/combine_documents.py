@@ -7,6 +7,10 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+# Run as `python3 Scripts/combine_documents.py`, which puts Scripts/ (not the
+# repo root) on sys.path, so the Scripts.* import below can't resolve without this.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from Scripts.util.image_extraction import (
     describe_pdf_page_if_image_only,
     describe_pdf_page_images,
