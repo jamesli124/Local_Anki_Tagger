@@ -9,3 +9,16 @@ venv/*
 # Python
 __pycache__/
 *.py[cod]
+
+# Pipeline-generated outputs (written to repo root by main.py / individual
+# stage scripts; see CLAUDE.md TODO about giving these a dedicated directory)
+anki_deck.apkg
+anki_embeddings.csv
+Merged.csv
+*_embeddings.csv
+*_learning_objectives.csv
+*_cards.csv
+*_progress.csv
+/*.pdf
+Archive/
+cards_for_merging/
