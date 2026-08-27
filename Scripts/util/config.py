@@ -11,7 +11,7 @@ if PROVIDER == 'ollama':
     BASE_URL = "http://localhost:11434/v1"
     API_KEY = "ollama"  # Dummy key for Ollama
     CHAT_MODEL = "ornith-1.5:9b"
-    EMBEDDING_MODEL = "qwen3-embedding:8b"
+    EMBEDDING_MODEL = "embeddinggemma"
 else:
     BASE_URL = None  # Use OpenAI default
     API_KEY = os.getenv('OPENAI_API_KEY')
