@@ -35,7 +35,7 @@ def calculate_embeddings(df):
 
 
 def save_embeddings(df, output_prefix):
-    df.to_csv(f"./{output_prefix}_embeddings.csv", index=False)
+    df.to_csv(os.path.join(source_folder, f"{output_prefix}_embeddings.csv"), index=False)
 
 
 def main():
