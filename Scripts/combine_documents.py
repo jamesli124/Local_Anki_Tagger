@@ -1,6 +1,6 @@
 import os
 import sys
-import fitz  # PyMuPDF
+import pymupdf
 from docx import Document
 from pptx import Presentation
 from reportlab.lib.pagesizes import letter
@@ -22,7 +22,7 @@ from Scripts.util.image_extraction import (
 def extract_text_from_pdf(pdf_file):
     text = ""
     seen_xrefs = set()
-    with fitz.open(pdf_file) as pdf:
+    with pymupdf.open(pdf_file) as pdf:
         for page in pdf:
             page_text = page.get_text()
             if not page_text.strip():
