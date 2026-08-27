@@ -103,7 +103,7 @@ for lecture_file in lecture_files:
 
     script_file_pairs = [
         ("Scripts/make_learning_objectives.py", lecture_file),
-        ("Scripts/select_cards.py", "Data/anki_embeddings.csv", f"{lecture_name}_learning_objectives.csv"),
+        ("Scripts/select_cards.py", "Data/anki_embeddings.parquet", f"{lecture_name}_learning_objectives.parquet"),
     ]
 
     lecture_succeeded = True
@@ -153,7 +153,7 @@ for lecture_file in lecture_files:
     # of an archive.
     outputs_to_move = [
         cards_csv,
-        f"{lecture_name}_learning_objectives.csv",
+        f"{lecture_name}_learning_objectives.parquet",
         f"{lecture_name}_progress.csv",
         lecture_file,
     ]

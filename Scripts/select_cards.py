@@ -28,21 +28,8 @@ def handle_api_error(func):
                 t+=5
     return wrapper
 
-def convert_to_np_array(s):
-    return np.fromstring(s.strip("[]"), sep=",")
-
 def load_emb(path):
-
-    # Specify the data types for columns 0, 1, and 2
-    column_dtypes = {0: str, 1: str, 2: int}
-
-    # Read CSV file and interpret column types
-    df = pd.read_csv(
-        path,
-        dtype=column_dtypes,
-        converters={3: convert_to_np_array})
-
-    return df
+    return pd.read_parquet(path)
 
 def vs(x, y):
     return np.dot(np.array(x), np.array(y))
@@ -104,7 +91,7 @@ def clean_reply(s):
 
 def main(emb_path,obj_path):
 
-    output_prefix = os.path.basename(obj_path).replace("_learning_objectives.csv",'')
+    output_prefix = os.path.basename(obj_path).replace("_learning_objectives.parquet",'')
 
     # load previous progress if exists
     last_processed_index = -1

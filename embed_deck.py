@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 from Scripts.util.embeddings_utils import get_embedding
 from Scripts.util import config, token_utils
@@ -30,12 +31,14 @@ def filter_by_tokens(df):
 
 
 def calculate_embeddings(df):
-    return [get_embedding(card, model=EMBEDDING_MODEL) for card in
+    # float32 keeps the Parquet output compact (embedding models don't carry
+    # meaningful precision beyond float32 anyway) and matches list<float32> on read.
+    return [np.array(get_embedding(card, model=EMBEDDING_MODEL), dtype=np.float32) for card in
             tqdm(df.card, desc="Calculating embeddings", dynamic_ncols=True)]
 
 
 def save_embeddings(df, output_prefix):
-    df.to_csv(os.path.join(source_folder, f"{output_prefix}_embeddings.csv"), index=False)
+    df.to_parquet(os.path.join(source_folder, f"{output_prefix}_embeddings.parquet"), index=False)
 
 
 def main():

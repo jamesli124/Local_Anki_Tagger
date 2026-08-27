@@ -16,7 +16,9 @@ anki_deck.apkg
 anki_embeddings.csv
 Merged.csv
 *_embeddings.csv
+*_embeddings.parquet
 *_learning_objectives.csv
+*_learning_objectives.parquet
 *_cards.csv
 *_progress.csv
 /*.pdf

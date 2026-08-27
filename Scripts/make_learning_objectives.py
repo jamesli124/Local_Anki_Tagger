@@ -1,4 +1,6 @@
-import os, re, sys, csv, glob, time
+import os, re, sys, glob, time
+import numpy as np
+import pandas as pd
 import tiktoken
 import fitz
 import pdfplumber
@@ -211,22 +213,22 @@ def generate_embedding(obj, embedding_model=config.EMBEDDING_MODEL, embedding_en
     return tokens, emb
 
 
-def write_to_csv(csv_writer, output_prefix, objectives):
-    n = 0
+def objectives_to_rows(output_prefix, objectives):
+    rows = []
     for obj in objectives:
         obj_clean = re.sub(r'^\d+\.', '', obj).strip().lstrip('- ')
         remove_words = ['Summary', 'Learning', 'Objective', 'Guiding', 'Additional', 'Question']
         if len([word for word in remove_words if word in obj_clean]) < 2:
-            n += 1
             tokens, emb = generate_embedding(obj)
-            csv_writer.writerow([output_prefix, obj_clean, tokens, emb])
-    print(f"Wrote {n} learning objectives to file for {output_prefix}")
+            rows.append([output_prefix, obj_clean, tokens, np.array(emb, dtype=np.float32)])
+    print(f"Generated {len(rows)} learning objectives for {output_prefix}")
+    return rows
 
 
 def main(input_path):
     path = Path(input_path)
     output_prefix = path.stem
-    output_file = output_prefix + "_learning_objectives.csv"
+    output_file = output_prefix + "_learning_objectives.parquet"
 
     if path.is_file():
         input_files = [input_path]
@@ -237,15 +239,15 @@ def main(input_path):
         print("The provided path is not a valid file or directory.")
         sys.exit(1)
 
-    with open(output_file, 'a', newline='', encoding='utf-8') as csvfile:
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerow(['name', 'learning_objective', 'tokens', 'emb'])
+    all_rows = []
+    for file_path in input_files:
+        print(f"Processing file: {file_path}")  # Debugging print statement
+        objectives = define_objectives_from_file(file_path)
+        tag = Path(file_path).stem
+        all_rows.extend(objectives_to_rows(tag, objectives))
 
-        for file_path in input_files:
-            print(f"Processing file: {file_path}")  # Debugging print statement
-            objectives = define_objectives_from_file(file_path)
-            tag = Path(file_path).stem
-            write_to_csv(csv_writer, tag, objectives)
+    df = pd.DataFrame(all_rows, columns=['name', 'learning_objective', 'tokens', 'emb'])
+    df.to_parquet(output_file, index=False)
 
 
 if __name__ == "__main__":
