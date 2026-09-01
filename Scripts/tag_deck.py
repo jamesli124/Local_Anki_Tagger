@@ -1,13 +1,20 @@
 import os, sys
 import shutil
-import zipfile
 import pandas as pd
 from anki.collection import Collection
+from anki.import_export_pb2 import (
+    ImportAnkiPackageOptions,
+    ImportAnkiPackageRequest,
+    ExportAnkiPackageOptions,
+)
     #python3 Scripts/tag_deck.py learning_guide_cards.csv anki_deck.apkg
 
 HIGH_RELEVANCE_CUTOFF = 70
 MEDIUM_RELEVANCE_CUTOFF = 50
 REMOVE_RELEVANCE_CUTOFF = 40
+
+TEMP_DIR = "temp_folder"
+TEMP_COLLECTION_PATH = os.path.join(TEMP_DIR, "collection.anki2")
 
 def main(card_path, anki_apkg):
 
@@ -21,16 +28,24 @@ def main(card_path, anki_apkg):
     # Group by 'guid' and keep only the row with the highest 'score' for each group
     df = df.loc[df.groupby('guid')['score'].idxmax()]
 
-    # Unzip the .apkg file to a temporary folder
-    with zipfile.ZipFile(anki_apkg, 'r') as zip_ref:
-        zip_ref.extractall("temp_folder")
+    # Import the .apkg into a fresh temporary collection via Anki's own
+    # import API, rather than hand-unzipping and looking for a bare
+    # ".anki21" file -- modern Anki exports store the collection as a
+    # zstd-compressed "collection.anki21b" instead, which a plain
+    # endswith(".anki21") check misses entirely.
+    if os.path.exists(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR)
+    os.makedirs(TEMP_DIR)
 
-    # The main .anki2 database file should have been extracted now
-    # Look for the .anki21 file in the temp_folder
-    anki2_file = [f for f in os.listdir("temp_folder") if f.endswith(".anki21")][0]
-
-    # Initialize a new collection
-    col = Collection(os.path.join("temp_folder", anki2_file))
+    col = Collection(TEMP_COLLECTION_PATH)
+    col.import_anki_package(ImportAnkiPackageRequest(
+        package_path=os.path.abspath(anki_apkg),
+        options=ImportAnkiPackageOptions(
+            merge_notetypes=True,
+            with_scheduling=True,
+            with_deck_configs=True,
+        ),
+    ))
     tagged = set()
 
     # Iterate through all cards
@@ -69,17 +84,28 @@ def main(card_path, anki_apkg):
             except:
                 print(f"guid not found for card: {row['card']}")
 
-    # Save the collection
+    # Close and reopen so the raw SQL tag writes above are fully committed and
+    # the backend's in-memory state is clean before exporting.
     col.close()
+    col = Collection(TEMP_COLLECTION_PATH)
 
-    # Re-create the .apkg file
-    with zipfile.ZipFile(anki_apkg, 'w') as zip_ref:
-        for filename in os.listdir("temp_folder"):
-            zip_ref.write(os.path.join("temp_folder", filename), arcname=filename)
+    # Re-create the .apkg file via Anki's own export API (handles the
+    # zip layout, media remapping, and collection compression itself).
+    col.export_anki_package(
+        out_path=os.path.abspath(anki_apkg),
+        options=ExportAnkiPackageOptions(
+            with_scheduling=True,
+            with_deck_configs=True,
+            with_media=True,
+            legacy=False,
+        ),
+        limit=None,
+    )
+    col.close()
 
     # Clean up the temporary folder
     print(f"Tagged {len(tagged)} cards. Process Complete")
-    shutil.rmtree("temp_folder")
+    shutil.rmtree(TEMP_DIR)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
